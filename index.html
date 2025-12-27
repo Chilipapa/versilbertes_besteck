@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Versilbertes Besteck</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <h1>Versilbertes Besteck</h1>
+
+    <section class="card">
+      <div class="row">
+        <div class="label">Besteck (90/100):</div>
+        <div id="besteck" class="value">—</div>
+      </div>
+      <div class="row">
+        <div class="label">Messer (90/100):</div>
+        <div id="messer" class="value">—</div>
+      </div>
+      <div id="meta" class="meta">Quelle: <a href="https://www.silber-kraft.de/versilbertes-besteck" target="_blank" rel="noopener">silber-kraft.de</a> • <a id="valuesLink" href="/values.json" target="_blank" rel="noopener">values.json</a></div>
+
+      <div class="controls">
+        <button id="refresh">Aktualisieren</button>
+      </div>
+
+      <div id="status" class="status" aria-live="polite">Bereit</div>
+      <div id="updated" class="meta" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
