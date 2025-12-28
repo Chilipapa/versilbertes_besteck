@@ -1,4 +1,4 @@
-// Client: lädt bevorzugt `/values.json` (vom GitHub Action-Workflow erzeugt), fällt bei Fehlen auf Proxy zurück
+// Client: Holt Live‑Daten bei Button‑Klick (direkter Fetch, bei Blockierung Proxy‑Fallback)
 
 const TARGET = 'https://www.silber-kraft.de/versilbertes-besteck';
 const PROXY = 'https://api.allorigins.win/raw?url='; // Demo-Proxy, nur für Tests
@@ -39,42 +39,48 @@ function extractValuesFromHtml(html) {
   return { besteck, messer };
 }
 
-async function fetchValuesJson() {
-  const res = await fetch('/values.json');
-  if (!res.ok) throw new Error(res.statusText || res.status);
-  return res.json();
-}
-
 async function fetchProxyPage() {
   const res = await fetch(PROXY + encodeURIComponent(TARGET));
   if (!res.ok) throw new Error('Proxy HTTP ' + res.status);
   return res.text();
 }
 
+async function fetchTargetPage() {
+  // Try direct fetch to the target site (may be blocked by CORS in some browsers)
+  const res = await fetch(TARGET);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.text();
+}
+
 async function fetchAndUpdate() {
   statusEl.textContent = 'Lade…';
 
-  // 1) values.json (GitHub Pages) versuchen
+  // 1) Direkter Fetch vom Ziel (Live) versuchen
   try {
-    const data = await fetchValuesJson();
-    if (data && (data.besteck || data.messer)) {
-      besteckEl.textContent = data.besteck || 'nicht gefunden';
-      messerEl.textContent = data.messer || 'nicht gefunden';
-      statusEl.textContent = `Letzte Prüfung: ${new Date().toLocaleTimeString()} (values.json)`;
-      // show updated timestamp if present
+    const html = await fetchTargetPage();
+    const { besteck, messer } = extractValuesFromHtml(html);
+    if (besteck || messer) {
+      besteckEl.textContent = besteck || 'nicht gefunden';
+      messerEl.textContent = messer || 'nicht gefunden';
+      statusEl.textContent = `Letzte Prüfung: ${new Date().toLocaleTimeString()} (Live)`;
       const updatedEl = document.getElementById('updated');
-      if (data.updated && updatedEl) {
-        const d = new Date(data.updated);
-        updatedEl.textContent = `Letzte Aktualisierung (values.json): ${d.toLocaleString()}`;
-      }
+      if (updatedEl) updatedEl.textContent = '';
       return;
     }
-    statusEl.textContent = 'values.json leer, versuche Fallback...';
+    statusEl.textContent = 'Live: Werte nicht gefunden, versuche Proxy‑Fallback...';
   } catch (err) {
-    statusEl.textContent = 'values.json nicht verfügbar, Fallback per Proxy...';
+    // If the error is a TypeError (e.g. 'Failed to fetch') it often indicates
+    // a CORS or network issue in the browser. Provide a helpful hint.
+    const msg = (err && err.message) ? err.message : String(err);
+    const looksLikeNetwork = err instanceof TypeError || /Failed to fetch|NetworkError/i.test(msg);
+    if (looksLikeNetwork) {
+      statusEl.textContent = 'Direkter Fetch fehlgeschlagen (möglicherweise CORS oder Netzwerk). Versuche Proxy‑Fallback...';
+    } else {
+      statusEl.textContent = 'Direkter Fetch fehlgeschlagen: ' + msg + ' — versuche Proxy‑Fallback...';
+    }
   }
 
-  // 2) Proxy-Fallback
+  // Proxy-Fallback
   try {
     const html = await fetchProxyPage();
     const { besteck, messer } = extractValuesFromHtml(html);
@@ -82,13 +88,14 @@ async function fetchAndUpdate() {
     messerEl.textContent = messer || 'nicht gefunden';
     statusEl.textContent = `Letzte Prüfung: ${new Date().toLocaleTimeString()} (Proxy)`;
   } catch (err) {
-    statusEl.textContent = 'Fehler: ' + err.message + ' (kein values.json & Proxy fehlgeschlagen)';
+    const msg = (err && err.message) ? err.message : String(err);
+    statusEl.textContent = 'Proxy‑Fallback fehlgeschlagen: ' + msg + ' (kein Erfolg)';
     besteckEl.textContent = '—';
     messerEl.textContent = '—';
   }
 }
 
-refreshBtn.addEventListener('click', fetchAndUpdate);
+const fetchBtn = document.getElementById('fetchNow') || refreshBtn;
+fetchBtn.addEventListener('click', fetchAndUpdate);
 
-// initial
-fetchAndUpdate();
+// Hinweis: Kein automatischer Abruf beim Laden — die Daten werden nur bei Klick geholt.

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "echo \"No server — öffne index.html im Browser\""
   },
   "dependencies": {
     "axios": "^1.4.0",
